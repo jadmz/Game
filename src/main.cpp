@@ -7,8 +7,9 @@ and may not be redistributed without written permission.*/
 #include <stdio.h>
 #include "GameConfig.h"
 #include <string>
+#include "tinyxml2.h"
 
-//Screen dimension constants
+//Screen dimension constants  
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
@@ -19,6 +20,55 @@ const int SCREEN_HEIGHT = 480;
 SDL_Rect rects[SPRITE_COUNT];
 
 using namespace std;
+using namespace tinyxml2;
+
+class Font {
+
+};
+
+int loadFont(string path, Font* font) {
+	LOG("Loading Font: %s\n", path.c_str());
+	string newPath = path;
+	path += ".xml";
+	XMLDocument doc;
+	doc.LoadFile(path.c_str());
+
+	XMLNode* charNode = 
+		doc.FirstChildElement("font")->FirstChildElement("chars")->FirstChild();
+
+	XMLElement* element;
+	while (charNode) {
+		element = charNode->ToElement();
+		
+		int offsetX;
+		int offsetY;
+		int advance;
+		int rectX;
+		int rectY;
+		int rectW;
+		int rectH;
+		element->QueryIntAttribute("advance", &advance);
+		element->QueryIntAttribute("offset_x", &offsetX);
+		element->QueryIntAttribute("offset_y", &offsetY);
+		element->QueryIntAttribute("rect_x", &rectX);
+		element->QueryIntAttribute("rect_y", &rectY);
+		element->QueryIntAttribute("rect_w", &rectW);
+		element->QueryIntAttribute("rect_h", &rectH);
+
+		LOG("Advance:%d, OffsetX: %d, OffsetY: %d, RectX: %d, RectY: %d, RectW: %d, RectH: %d\n",
+			advance,
+			offsetX,
+			offsetY,
+			rectX,
+			rectY,
+			rectW,
+			rectH);
+		charNode = charNode->NextSibling();
+	}
+	//LOG("%s\n", doc.FirstChild()->NextSibling());
+
+	return 0;
+}
 
 int main( int argc, char* args[] )
 {
@@ -98,9 +148,8 @@ int main( int argc, char* args[] )
 				    	rects[i].w = 40;
 				    	rects[i].h = 40;
 				    }
-
-				    //XMLDocument doc;
-					//doc.LoadFile( "dream.xml" );
+					Font font;
+					loadFont("..\\assets\\arial_regular_20", &font);
 
 					//Main loop flag
 					bool quit = false;

@@ -44,5 +44,9 @@ add_executable(Game ${SOURCES})
 
 target_link_libraries(Game 
 	${SDL2_LIBRARY} 
-	${SDL2_IMAGE_LIBRARIES})   
+	${SDL2_IMAGE_LIBRARIES})
+
+link_directories(
+	${SDL2_LIBRARY} 
+	${SDL2_IMAGE_LIBRARIES})	
 
