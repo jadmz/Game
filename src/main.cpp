@@ -99,8 +99,8 @@ int main( int argc, char* args[] )
 				    	rects[i].h = 40;
 				    }
 
-				    XMLDocument doc;
-					doc.LoadFile( "dream.xml" );
+				    //XMLDocument doc;
+					//doc.LoadFile( "dream.xml" );
 
 					//Main loop flag
 					bool quit = false;
