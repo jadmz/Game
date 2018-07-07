@@ -8,12 +8,14 @@ and may not be redistributed without written permission.*/
 #include "GameConfig.h"
 #include <string>
 #include "tinyxml2.h"
+#include <memory>
+#include <map>
 
 //Screen dimension constants  
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
-#define SPRITE_COUNT 20000
+#define SPRITE_COUNT 1
 
 #define LOG(...)  printf("[%s:%d] ", __FILE__, __LINE__); printf(__VA_ARGS__)
 
@@ -21,22 +23,125 @@ SDL_Rect rects[SPRITE_COUNT];
 
 using namespace std;
 using namespace tinyxml2;
+class Glyph;
 
-class Font {
+typedef map<string, shared_ptr<Glyph>> StringToSharedGlyphPtrMap;
+typedef pair<string, shared_ptr<Glyph>> StringToSharedGlyphPtrPair;
 
+class Glyph {
+private:
+	int offsetX;
+	int offsetY;
+	int advance;
+	std::shared_ptr<SDL_Rect> rect;
+	shared_ptr<string> value;
+
+public: 
+	Glyph(int offsetX, int offsetY, int advance,
+		std::shared_ptr<SDL_Rect> rect, shared_ptr<string> value) {
+		this->offsetX = offsetX;
+		this->offsetY = offsetY;
+		this->advance = advance;
+		this->rect = rect;
+		this->value = value;
+	}
+
+	shared_ptr<SDL_Rect> getRect() {
+		return rect;
+	}
+
+	int getOffsetX() {
+		return offsetX;
+	}
+
+	int getOffsetY() {
+		return offsetY;
+	}
+
+	int getAdvance() {
+		return advance;
+	}
 };
 
-int loadFont(string path, Font* font) {
+class Font {
+private:
+	unique_ptr<StringToSharedGlyphPtrMap> glyphMap;
+	SDL_Texture* texture;
+	int height;
+
+public:
+	Font(unique_ptr<StringToSharedGlyphPtrMap> glyphMap, SDL_Texture* texture, int height) {
+		this->glyphMap = std::move(glyphMap);
+		this->texture = texture;
+		this->height = height;
+	}
+
+	~Font() {
+		SDL_DestroyTexture(texture);
+	}
+
+	void render(SDL_Renderer* renderer, const string& text, int x, int y) {
+		y += height / 2;
+		for (int i = 0; i < text.size(); i++) {
+			string key = string(1, text.at(i));
+			shared_ptr<Glyph> glyph = glyphMap->at(key);
+			
+			shared_ptr<SDL_Rect> source = glyph->getRect();
+			SDL_Rect destination{ x + glyph->getOffsetX(), y - glyph->getOffsetY(), source->w, source->h };
+			
+			SDL_RenderCopy(renderer, texture, source.get(), &destination);
+			
+			x += glyph->getAdvance();
+		}
+	}
+};
+
+SDL_Texture* loadTexture(string path, SDL_Renderer* renderer, int* success) {
+	LOG("Loading texture: %s\n", path.c_str());
+	*success = 1;
+	SDL_Texture* texture = IMG_LoadTexture(renderer, path.c_str());
+	if (texture == NULL)
+	{
+		LOG("Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError());
+		return NULL;
+	}
+
+	*success = 0;
+	return texture;
+}
+
+unique_ptr<Font> loadFont(string path, SDL_Renderer* renderer, int* failure) {
+	*failure = 1;
+
 	LOG("Loading Font: %s\n", path.c_str());
-	string newPath = path;
+	string texPath = path;
+	texPath += ".png";
+
+	int fail;
+	SDL_Texture* texture = loadTexture(texPath, renderer, &fail);
+	if (fail) {
+		return NULL;
+	}
+
 	path += ".xml";
 	XMLDocument doc;
 	doc.LoadFile(path.c_str());
+	XMLNode* fontNode = doc.FirstChildElement("font");
+	if (!fontNode) {
+		return NULL;
+	}
+	int height;
+	fontNode->FirstChildElement("metrics")->QueryIntAttribute("height", &height);
+
 
 	XMLNode* charNode = 
-		doc.FirstChildElement("font")->FirstChildElement("chars")->FirstChild();
+		fontNode->FirstChildElement("chars")->FirstChild();
 
 	XMLElement* element;
+
+	unique_ptr<StringToSharedGlyphPtrMap> valueToGlyphMap = make_unique<StringToSharedGlyphPtrMap>();
+	const char* tmpValue = "Temp Value";
+	StringToSharedGlyphPtrPair pair;
 	while (charNode) {
 		element = charNode->ToElement();
 		
@@ -54,20 +159,24 @@ int loadFont(string path, Font* font) {
 		element->QueryIntAttribute("rect_y", &rectY);
 		element->QueryIntAttribute("rect_w", &rectW);
 		element->QueryIntAttribute("rect_h", &rectH);
+		element->QueryStringAttribute("id", &tmpValue);
 
-		LOG("Advance:%d, OffsetX: %d, OffsetY: %d, RectX: %d, RectY: %d, RectW: %d, RectH: %d\n",
-			advance,
-			offsetX,
-			offsetY,
-			rectX,
-			rectY,
-			rectW,
-			rectH);
+		string value = string(tmpValue);
+
+		std::shared_ptr <Glyph> glyph = make_shared<Glyph>(offsetX, offsetY, advance,
+			std::shared_ptr<SDL_Rect>(new SDL_Rect{ rectX, rectY, rectW, rectH }),
+			make_shared<string>(value.c_str()));
+
+		pair.first = value;
+		pair.second = glyph;
+
+		valueToGlyphMap->insert(pair);
+
 		charNode = charNode->NextSibling();
 	}
-	//LOG("%s\n", doc.FirstChild()->NextSibling());
-
-	return 0;
+	
+	*failure = 0;
+	return make_unique<Font>(std::move(valueToGlyphMap), texture, height);
 }
 
 int main( int argc, char* args[] )
@@ -123,24 +232,21 @@ int main( int argc, char* args[] )
 	            else
 	            {
 					//Initialize renderer color
-               		SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xF0, 0x00, 0xFF ); 
+               		SDL_SetRenderDrawColor( gRenderer, 0x00, 0x00, 0x00, 0xFF ); 
 
 				    //Load image at specified path
-				    gTexture = IMG_LoadTexture(gRenderer, textureName.c_str() );
-				    if( gTexture == NULL )
-				    {
-				        LOG( "Unable to load image %s! SDL_image Error: %s\n", textureName.c_str(), IMG_GetError() );
-				        return 1;
-				    }
-				    else
-				    {
-				    	Uint32 format;
-				    	int access;
-				    	SDL_QueryTexture(gTexture, &format, &access, &texWidth, &texHeight);
+					int failure;
+					gTexture = loadTexture(textureName, gRenderer, &failure);
+					if (failure) {
+						LOG("Failed to load texture");
+						return 1;
+					}
+					Uint32 format;
+					int access;
+					SDL_QueryTexture(gTexture, &format, &access, &texWidth, &texHeight);
 
-				    	LOG("Texture Loaded: %s: Format(%s) Access(%d) Width(%d) Height(%d)\n",
-				    		textureName.c_str(), SDL_GetPixelFormatName(format), access, texWidth, texHeight);
-				    }
+					LOG("Texture Loaded: %s: Format(%s) Access(%d) Width(%d) Height(%d)\n",
+						textureName.c_str(), SDL_GetPixelFormatName(format), access, texWidth, texHeight);
 
 				    for (int i = 0; i < SPRITE_COUNT; i++) {
 				    	rects[i].x = rand() % SCREEN_WIDTH;
@@ -148,8 +254,11 @@ int main( int argc, char* args[] )
 				    	rects[i].w = 40;
 				    	rects[i].h = 40;
 				    }
-					Font font;
-					loadFont("..\\assets\\arial_regular_20", &font);
+					unique_ptr<Font> font = loadFont("..\\assets\\arial_regular_10", gRenderer, &failure);
+					if (failure) {
+						LOG("Failed to load font");
+						return 1;
+					}
 
 					//Main loop flag
 					bool quit = false;
@@ -160,6 +269,9 @@ int main( int argc, char* args[] )
 					Uint64 start;
 					Uint64 end;
 					Uint32 lastLoggedFPS = 0;
+
+					char fpsBuf[20];
+					string fpsText = "";
 
 					//While application is running
 					while( !quit )
@@ -183,6 +295,7 @@ int main( int argc, char* args[] )
 		                	SDL_RenderCopy( gRenderer, gTexture, NULL, &(rects[i]));
 		                }
 
+						font->render(gRenderer, fpsText, 10, 10);
 		                //Update screen
 		                SDL_RenderPresent( gRenderer );
 
@@ -191,7 +304,8 @@ int main( int argc, char* args[] )
 		                float elapsed = (end - start) / (float)SDL_GetPerformanceFrequency();
 		                Uint32 now = SDL_GetTicks();
 		                if (now - lastLoggedFPS > 1000) {
-		                	LOG("FPS: %.2f\n", 1.0f/elapsed);
+							sprintf(fpsBuf, "FPS: %d",  (int)(1.0f / elapsed));
+							fpsText = fpsBuf;
 		                	lastLoggedFPS = now;
 		                }
 					}

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<font type="NGL">
+ <description size="10" family="Arial" style="Regular"/>
+ <metrics ascender="13" height="15" descender="-3"/>
+ <texture width="128" height="128" file="arial_regular_10.PNG"/>
+ <chars>
+  <char offset_x="0" offset_y="0" advance="4" rect_w="0" id=" " rect_x="1" rect_y="12" rect_h="0"/>
+  <char offset_x="1" offset_y="9" advance="4" rect_w="3" id="!" rect_x="2" rect_y="3" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="5" rect_w="4" id="&quot;" rect_x="6" rect_y="3" rect_h="3"/>
+  <char offset_x="0" offset_y="9" advance="7" rect_w="8" id="#" rect_x="11" rect_y="3" rect_h="9"/>
+  <char offset_x="0" offset_y="11" advance="8" rect_w="7" id="$" rect_x="20" rect_y="1" rect_h="12"/>
+  <char offset_x="0" offset_y="9" advance="12" rect_w="11" id="%" rect_x="28" rect_y="3" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="10" rect_w="10" id="&amp;" rect_x="40" rect_y="3" rect_h="10"/>
+  <char offset_x="0" offset_y="9" advance="3" rect_w="3" id="'" rect_x="51" rect_y="3" rect_h="3"/>
+  <char offset_x="0" offset_y="9" advance="4" rect_w="4" id="(" rect_x="55" rect_y="3" rect_h="12"/>
+  <char offset_x="0" offset_y="9" advance="5" rect_w="5" id=")" rect_x="60" rect_y="3" rect_h="12"/>
+  <char offset_x="0" offset_y="9" advance="5" rect_w="5" id="*" rect_x="66" rect_y="3" rect_h="5"/>
+  <char offset_x="1" offset_y="8" advance="8" rect_w="6" id="+" rect_x="72" rect_y="4" rect_h="6"/>
+  <char offset_x="1" offset_y="1" advance="4" rect_w="2" id="," rect_x="79" rect_y="11" rect_h="3"/>
+  <char offset_x="1" offset_y="4" advance="6" rect_w="4" id="-" rect_x="82" rect_y="8" rect_h="1"/>
+  <char offset_x="0" offset_y="1" advance="3" rect_w="3" id="." rect_x="87" rect_y="11" rect_h="1"/>
+  <char offset_x="0" offset_y="9" advance="4" rect_w="4" id="/" rect_x="91" rect_y="3" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="8" rect_w="7" id="0" rect_x="96" rect_y="3" rect_h="9"/>
+  <char offset_x="1" offset_y="9" advance="7" rect_w="5" id="1" rect_x="104" rect_y="3" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="8" rect_w="8" id="2" rect_x="110" rect_y="3" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="7" rect_w="7" id="3" rect_x="119" rect_y="3" rect_h="9"/>
+  <char offset_x="1" offset_y="9" advance="9" rect_w="7" id="4" rect_x="1" rect_y="16" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="8" rect_w="8" id="5" rect_x="9" rect_y="16" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="8" rect_w="7" id="6" rect_x="18" rect_y="16" rect_h="9"/>
+  <char offset_x="1" offset_y="9" advance="8" rect_w="6" id="7" rect_x="26" rect_y="16" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="8" rect_w="7" id="8" rect_x="33" rect_y="16" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="8" rect_w="7" id="9" rect_x="41" rect_y="16" rect_h="9"/>
+  <char offset_x="0" offset_y="7" advance="3" rect_w="3" id=":" rect_x="49" rect_y="18" rect_h="7"/>
+  <char offset_x="0" offset_y="7" advance="3" rect_w="3" id=";" rect_x="53" rect_y="18" rect_h="9"/>
+  <char offset_x="1" offset_y="8" advance="8" rect_w="7" id="&lt;" rect_x="57" rect_y="17" rect_h="7"/>
+  <char offset_x="1" offset_y="7" advance="8" rect_w="6" id="=" rect_x="65" rect_y="18" rect_h="4"/>
+  <char offset_x="1" offset_y="8" advance="8" rect_w="7" id=">" rect_x="72" rect_y="17" rect_h="7"/>
+  <char offset_x="0" offset_y="9" advance="7" rect_w="6" id="?" rect_x="80" rect_y="16" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="14" rect_w="14" id="@" rect_x="87" rect_y="16" rect_h="12"/>
+  <char offset_x="-1" offset_y="9" advance="9" rect_w="10" id="A" rect_x="102" rect_y="16" rect_h="9">
+   <kerning advance="-1" id="T"/>
+   <kerning advance="-1" id="V"/>
+   <kerning advance="-1" id="Y"/>
+  </char>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="8" id="B" rect_x="113" rect_y="16" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="10" rect_w="10" id="C" rect_x="1" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="10" rect_w="9" id="D" rect_x="12" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="8" id="E" rect_x="22" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="8" rect_w="8" id="F" rect_x="31" rect_y="29" rect_h="9">
+   <kerning advance="-1" id=","/>
+   <kerning advance="-1" id="."/>
+  </char>
+  <char offset_x="0" offset_y="9" advance="11" rect_w="10" id="G" rect_x="40" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="8" id="H" rect_x="51" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="3" rect_w="3" id="I" rect_x="60" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="7" rect_w="6" id="J" rect_x="64" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="9" id="K" rect_x="71" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="7" rect_w="7" id="L" rect_x="81" rect_y="29" rect_h="9">
+   <kerning advance="-1" id="T"/>
+   <kerning advance="-1" id="V"/>
+   <kerning advance="-1" id="W"/>
+   <kerning advance="-1" id="Y"/>
+  </char>
+  <char offset_x="0" offset_y="9" advance="11" rect_w="10" id="M" rect_x="89" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="8" id="N" rect_x="100" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="11" rect_w="10" id="O" rect_x="109" rect_y="29" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="8" id="P" rect_x="1" rect_y="39" rect_h="9">
+   <kerning advance="-1" id=","/>
+   <kerning advance="-1" id="."/>
+   <kerning advance="-1" id="A"/>
+  </char>
+  <char offset_x="0" offset_y="9" advance="11" rect_w="11" id="Q" rect_x="10" rect_y="39" rect_h="10"/>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="9" id="R" rect_x="22" rect_y="39" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="8" id="S" rect_x="32" rect_y="39" rect_h="9"/>
+  <char offset_x="1" offset_y="9" advance="10" rect_w="8" id="T" rect_x="41" rect_y="39" rect_h="9">
+   <kerning advance="-1" id=","/>
+   <kerning advance="-1" id="."/>
+   <kerning advance="-1" id=":"/>
+   <kerning advance="-1" id=";"/>
+   <kerning advance="-1" id="A"/>
+   <kerning advance="-1" id="a"/>
+   <kerning advance="-1" id="c"/>
+   <kerning advance="-1" id="e"/>
+   <kerning advance="-1" id="o"/>
+   <kerning advance="-1" id="s"/>
+  </char>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="8" id="U" rect_x="50" rect_y="39" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="9" id="V" rect_x="59" rect_y="39" rect_h="9">
+   <kerning advance="-1" id=","/>
+   <kerning advance="-1" id="."/>
+   <kerning advance="-1" id="A"/>
+   <kerning advance="-1" id="a"/>
+  </char>
+  <char offset_x="0" offset_y="9" advance="13" rect_w="13" id="W" rect_x="69" rect_y="39" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="9" id="X" rect_x="83" rect_y="39" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="9" rect_w="9" id="Y" rect_x="93" rect_y="39" rect_h="9">
+   <kerning advance="-1" id=","/>
+   <kerning advance="-1" id="-"/>
+   <kerning advance="-1" id="."/>
+   <kerning advance="-1" id="A"/>
+   <kerning advance="-1" id="a"/>
+   <kerning advance="-1" id="e"/>
+   <kerning advance="-1" id="o"/>
+   <kerning advance="-1" id="p"/>
+   <kerning advance="-1" id="q"/>
+  </char>
+  <char offset_x="1" offset_y="9" advance="9" rect_w="7" id="Z" rect_x="103" rect_y="39" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="4" rect_w="4" id="[" rect_x="111" rect_y="39" rect_h="12"/>
+  <char offset_x="0" offset_y="9" advance="4" rect_w="4" id="\" rect_x="116" rect_y="39" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="4" rect_w="4" id="]" rect_x="121" rect_y="39" rect_h="12"/>
+  <char offset_x="0" offset_y="9" advance="6" rect_w="6" id="^" rect_x="1" rect_y="52" rect_h="5"/>
+  <char offset_x="-1" offset_y="-2" advance="7" rect_w="9" id="_" rect_x="8" rect_y="63" rect_h="1"/>
+  <char offset_x="0" offset_y="9" advance="4" rect_w="4" id="`" rect_x="18" rect_y="52" rect_h="2"/>
+  <char offset_x="0" offset_y="7" advance="8" rect_w="8" id="a" rect_x="23" rect_y="54" rect_h="7"/>
+  <char offset_x="0" offset_y="9" advance="8" rect_w="7" id="b" rect_x="32" rect_y="52" rect_h="9"/>
+  <char offset_x="0" offset_y="7" advance="7" rect_w="7" id="c" rect_x="40" rect_y="54" rect_h="7"/>
+  <char offset_x="0" offset_y="9" advance="8" rect_w="7" id="d" rect_x="48" rect_y="52" rect_h="9"/>
+  <char offset_x="0" offset_y="7" advance="8" rect_w="8" id="e" rect_x="56" rect_y="54" rect_h="7"/>
+  <char offset_x="-1" offset_y="9" advance="3" rect_w="5" id="f" rect_x="65" rect_y="52" rect_h="9"/>
+  <char offset_x="0" offset_y="7" advance="8" rect_w="7" id="g" rect_x="71" rect_y="54" rect_h="10"/>
+  <char offset_x="0" offset_y="9" advance="7" rect_w="6" id="h" rect_x="79" rect_y="52" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="3" rect_w="3" id="i" rect_x="86" rect_y="52" rect_h="9"/>
+  <char offset_x="-1" offset_y="9" advance="3" rect_w="4" id="j" rect_x="90" rect_y="52" rect_h="12"/>
+  <char offset_x="0" offset_y="9" advance="7" rect_w="7" id="k" rect_x="95" rect_y="52" rect_h="9"/>
+  <char offset_x="0" offset_y="9" advance="3" rect_w="3" id="l" rect_x="103" rect_y="52" rect_h="9"/>
+  <char offset_x="0" offset_y="7" advance="11" rect_w="10" id="m" rect_x="107" rect_y="54" rect_h="7"/>
+  <char offset_x="0" offset_y="7" advance="7" rect_w="6" id="n" rect_x="118" rect_y="54" rect_h="7"/>
+  <char offset_x="0" offset_y="7" advance="8" rect_w="7" id="o" rect_x="1" rect_y="68" rect_h="7"/>
+  <char offset_x="0" offset_y="7" advance="8" rect_w="7" id="p" rect_x="9" rect_y="68" rect_h="10"/>
+  <char offset_x="0" offset_y="7" advance="8" rect_w="7" id="q" rect_x="17" rect_y="68" rect_h="10"/>
+  <char offset_x="0" offset_y="7" advance="4" rect_w="5" id="r" rect_x="25" rect_y="68" rect_h="7"/>
+  <char offset_x="0" offset_y="7" advance="7" rect_w="7" id="s" rect_x="31" rect_y="68" rect_h="7"/>
+  <char offset_x="-1" offset_y="10" advance="3" rect_w="5" id="t" rect_x="39" rect_y="65" rect_h="10"/>
+  <char offset_x="0" offset_y="7" advance="7" rect_w="6" id="u" rect_x="45" rect_y="68" rect_h="7"/>
+  <char offset_x="0" offset_y="7" advance="7" rect_w="7" id="v" rect_x="52" rect_y="68" rect_h="7">
+   <kerning advance="-1" id=","/>
+   <kerning advance="-1" id="."/>
+  </char>
+  <char offset_x="0" offset_y="7" advance="10" rect_w="10" id="w" rect_x="60" rect_y="68" rect_h="7"/>
+  <char offset_x="0" offset_y="7" advance="7" rect_w="7" id="x" rect_x="71" rect_y="68" rect_h="7"/>
+  <char offset_x="0" offset_y="7" advance="7" rect_w="7" id="y" rect_x="79" rect_y="68" rect_h="10">
+   <kerning advance="-1" id=","/>
+   <kerning advance="-1" id="."/>
+  </char>
+  <char offset_x="1" offset_y="7" advance="8" rect_w="6" id="z" rect_x="87" rect_y="68" rect_h="7"/>
+  <char offset_x="0" offset_y="9" advance="5" rect_w="5" id="{" rect_x="94" rect_y="66" rect_h="12"/>
+  <char offset_x="0" offset_y="9" advance="3" rect_w="3" id="|" rect_x="100" rect_y="66" rect_h="12"/>
+  <char offset_x="0" offset_y="9" advance="5" rect_w="5" id="}" rect_x="104" rect_y="66" rect_h="12"/>
+  <char offset_x="1" offset_y="6" advance="9" rect_w="7" id="~" rect_x="110" rect_y="69" rect_h="2"/>
+ </chars>
+</font>
