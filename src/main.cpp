@@ -15,7 +15,7 @@ and may not be redistributed without written permission.*/
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
-#define SPRITE_COUNT 1
+#define SPRITE_COUNT 10000
 
 #define LOG(...)  printf("[%s:%d] ", __FILE__, __LINE__); printf(__VA_ARGS__)
 
@@ -25,8 +25,8 @@ using namespace std;
 using namespace tinyxml2;
 class Glyph;
 
-typedef map<string, shared_ptr<Glyph>> StringToSharedGlyphPtrMap;
-typedef pair<string, shared_ptr<Glyph>> StringToSharedGlyphPtrPair;
+typedef map<string, shared_ptr<Glyph> > StringToSharedGlyphPtrMap;
+typedef pair<string, shared_ptr<Glyph> > StringToSharedGlyphPtrPair;
 
 class Glyph {
 private:
@@ -87,7 +87,7 @@ public:
 			shared_ptr<Glyph> glyph = glyphMap->at(key);
 			
 			shared_ptr<SDL_Rect> source = glyph->getRect();
-			SDL_Rect destination{ x + glyph->getOffsetX(), y - glyph->getOffsetY(), source->w, source->h };
+			SDL_Rect destination = { x + glyph->getOffsetX(), y - glyph->getOffsetY(), source->w, source->h };
 			
 			SDL_RenderCopy(renderer, texture, source.get(), &destination);
 			
@@ -120,7 +120,7 @@ unique_ptr<Font> loadFont(string path, SDL_Renderer* renderer, int* failure) {
 	int fail;
 	SDL_Texture* texture = loadTexture(texPath, renderer, &fail);
 	if (fail) {
-		return NULL;
+		return unique_ptr<Font>(NULL);
 	}
 
 	path += ".xml";
@@ -128,7 +128,7 @@ unique_ptr<Font> loadFont(string path, SDL_Renderer* renderer, int* failure) {
 	doc.LoadFile(path.c_str());
 	XMLNode* fontNode = doc.FirstChildElement("font");
 	if (!fontNode) {
-		return NULL;
+		return unique_ptr<Font>(NULL);
 	}
 	int height;
 	fontNode->FirstChildElement("metrics")->QueryIntAttribute("height", &height);
@@ -139,7 +139,7 @@ unique_ptr<Font> loadFont(string path, SDL_Renderer* renderer, int* failure) {
 
 	XMLElement* element;
 
-	unique_ptr<StringToSharedGlyphPtrMap> valueToGlyphMap = make_unique<StringToSharedGlyphPtrMap>();
+	unique_ptr<StringToSharedGlyphPtrMap> valueToGlyphMap = unique_ptr<StringToSharedGlyphPtrMap>(new StringToSharedGlyphPtrMap());
 	const char* tmpValue = "Temp Value";
 	StringToSharedGlyphPtrPair pair;
 	while (charNode) {
@@ -163,9 +163,15 @@ unique_ptr<Font> loadFont(string path, SDL_Renderer* renderer, int* failure) {
 
 		string value = string(tmpValue);
 
-		std::shared_ptr <Glyph> glyph = make_shared<Glyph>(offsetX, offsetY, advance,
-			std::shared_ptr<SDL_Rect>(new SDL_Rect{ rectX, rectY, rectW, rectH }),
-			make_shared<string>(value.c_str()));
+		SDL_Rect* rect = new SDL_Rect;
+		rect->x = rectX;
+		rect->y = rectY;
+		rect->w = rectW;
+		rect->h = rectH;
+
+		std::shared_ptr <Glyph> glyph = shared_ptr<Glyph>(new Glyph(offsetX, offsetY, advance,
+			shared_ptr<SDL_Rect>(rect),
+			shared_ptr<string>(new string(value.c_str()))));
 
 		pair.first = value;
 		pair.second = glyph;
@@ -176,7 +182,7 @@ unique_ptr<Font> loadFont(string path, SDL_Renderer* renderer, int* failure) {
 	}
 	
 	*failure = 0;
-	return make_unique<Font>(std::move(valueToGlyphMap), texture, height);
+	return unique_ptr<Font>(new Font(std::move(valueToGlyphMap), texture, height));
 }
 
 int main( int argc, char* args[] )
@@ -238,7 +244,7 @@ int main( int argc, char* args[] )
 					int failure;
 					gTexture = loadTexture(textureName, gRenderer, &failure);
 					if (failure) {
-						LOG("Failed to load texture");
+						LOG("Failed to load texture\n");
 						return 1;
 					}
 					Uint32 format;
@@ -250,13 +256,13 @@ int main( int argc, char* args[] )
 
 				    for (int i = 0; i < SPRITE_COUNT; i++) {
 				    	rects[i].x = rand() % SCREEN_WIDTH;
-				    	rects[i].y = rand() % SCREEN_HEIGHT;
+				    	rects[i].y = rand() % SCREEN_HEIGHT+50;
 				    	rects[i].w = 40;
 				    	rects[i].h = 40;
 				    }
-					unique_ptr<Font> font = loadFont("..\\assets\\arial_regular_10", gRenderer, &failure);
+					unique_ptr<Font> font = loadFont("../assets/arial_regular_10", gRenderer, &failure);
 					if (failure) {
-						LOG("Failed to load font");
+						LOG("Failed to load font\n");
 						return 1;
 					}
 
