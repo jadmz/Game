@@ -99,21 +99,26 @@ public:
 	}
 };
 
-bool initRenderingSystem(SDL_Window** window) {
+bool initRenderingSystem() {
 	int imgFlags = IMG_INIT_PNG;
 	if( !( IMG_Init( imgFlags ) & imgFlags ) )
 	{
 		LOG( "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError() );
 		return false;
 	}
-	//Create window
-	*window = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
-	if( window == NULL )
-	{
-		LOG( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
-		return false;
-	}
-	return true;
+  return true;
+}
+
+bool createWindow(SDL_Window** window) {
+  //Create window
+  *window = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
+  if( *window == NULL )
+  {
+    LOG( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
+    return false;
+  }
+
+  return true;
 }
 
 bool createRenderer(SDL_Window* window, shared_ptr<Renderer>* renderer) {

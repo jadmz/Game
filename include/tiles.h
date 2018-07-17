@@ -11,7 +11,11 @@
 using namespace std;
 
 class TileDefinition;
+class TileInstance;
+
 typedef map<string, shared_ptr<TileDefinition> > NameToTileDefinitionMap;
+typedef map<int, shared_ptr<TileInstance> > PosToTileInstanceMap;
+
 
 class TileDefinition {
  private:
@@ -42,8 +46,10 @@ class TileInstance {
     this->texture = texture;
   }
 
-  void render(const Renderer& renderer, SDL_Rect& dest) {
-    renderer.render(*texture, tileDefinition->getTexRect(), &dest);
+  void render(const Renderer& renderer, int x , int y) {
+    SDL_Rect* source = tileDefinition->getTexRect();
+    SDL_Rect dest {x, y, source->w, source->h};
+    renderer.render(*texture, source, &dest);
   }
 };
 
@@ -64,6 +70,7 @@ class TilePalette {
     }
   }
 
+
   bool createTileInstance(string name, shared_ptr<TileInstance>& tileInstance) {
     NameToTileDefinitionMap::iterator it = tileDefinitions->find(name);
     if (it == tileDefinitions->end()) {
@@ -77,10 +84,58 @@ class TilePalette {
   }
 };
 
+class TileMap {
+private:
+  unique_ptr<PosToTileInstanceMap> tileInstances;
+  int mapWidth;
+  int mapHeight;
+  int tileLength;
+
+  int convertToKey(int x, int y) {
+    return y * mapWidth + x;
+  }
+
+  void convertKeyToXY(int key, int& x, int& y) {
+    x = key % mapWidth;
+    y = key / mapWidth;
+  }
+
+public:
+  TileMap(int mapWidth, int mapHeight, int tileLength) {
+    this->mapWidth = mapWidth;
+    this->mapHeight = mapHeight;
+    this->tileLength = tileLength;
+    tileInstances = unique_ptr<PosToTileInstanceMap>(new PosToTileInstanceMap());
+  }
+
+  int getMapWidth() const {
+    return mapWidth;
+  }
+
+  int getMapHeight() const {
+    return mapHeight;
+  }
+
+  void set(int x, int y, shared_ptr<TileInstance> tileInstance) {
+    (*tileInstances)[convertToKey(x,y)] = tileInstance;
+  }
+
+  void render(Renderer& renderer, int originX, int originY) {
+    for (auto const& keyAndTileInstance : *tileInstances)
+    {
+        int x;
+        int y;
+        convertKeyToXY(keyAndTileInstance.first, x, y);
+
+        keyAndTileInstance.second->render(renderer, x * tileLength, y * tileLength);
+    }
+  }
+};
+
 bool loadTilePalette(string path, AssetManager& assetManager, shared_ptr<TilePalette>& tilePalette) {
   shared_ptr<Texture> paletteTexture;
 
-  if (!assetManager.getTexture("../assets/test-block.png", &paletteTexture)) {
+  if (!assetManager.getTexture("../assets/gray-block.png", &paletteTexture)) {
     LOG ("Error loading tile palette: %s\n", path.c_str());
     return false;
   }
@@ -93,7 +148,7 @@ bool loadTilePalette(string path, AssetManager& assetManager, shared_ptr<TilePal
   rect->w = paletteTexture->getWidth();
   rect->h = paletteTexture->getHeight();
 
-  tileDefinitions.push_back(shared_ptr<TileDefinition>(new TileDefinition("white-block", unique_ptr<SDL_Rect>(rect))));
+  tileDefinitions.push_back(shared_ptr<TileDefinition>(new TileDefinition("gray-block", unique_ptr<SDL_Rect>(rect))));
 
   tilePalette = shared_ptr<TilePalette>(new TilePalette(paletteTexture, tileDefinitions));
 
