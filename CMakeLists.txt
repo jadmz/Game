@@ -2,6 +2,22 @@ cmake_minimum_required (VERSION 3.1.0)
 set (CMAKE_CXX_STANDARD 11)
 project (Game)
 
+set(BOX2D_DIR libs/Box2D)
+
+option(BOX2D_INSTALL "Install Box2D libs, includes, and CMake scripts" OFF)
+option(BOX2D_INSTALL_DOC "Install Box2D documentation" OFF)
+option(BOX2D_BUILD_SHARED "Build Box2D shared libraries" ON)
+option(BOX2D_BUILD_STATIC "Build Box2D static libraries" OFF)
+
+set(BOX2D_VERSION 2.3.0)
+add_subdirectory("${BOX2D_DIR}")
+
+add_definitions     ( ${BOX2D_DEFINITIONS} )
+include_directories ( ${BOX2D_INCLUDE_DIRS} )
+link_directories    ( ${BOX2D_LIBRARY_DIRS} )
+
+
+
 IF(MSVC)
 	set(SDL2_PATH "C:\\Users\\Joe\\Documents\\Libs\\SDL2-devel-2.0.8-VC\\SDL2-2.0.8\\")
 	set(SDL2_IMAGE_PATH "C:\\Users\\Joe\\Documents\\Libs\\SDL2_image-2.0.3-VC\\SDL2_image-2.0.3\\")
@@ -37,7 +53,8 @@ include_directories(
 	"${PROJECT_SOURCE_DIR}/include" 
 	"${PROJECT_BINARY_DIR}/include"
 	"${SDL2_INCLUDE_DIR}"
-	"${SDL2_IMAGE_INCLUDE_DIR}")
+	"${SDL2_IMAGE_INCLUDE_DIR}"
+	"libs")
 
 file(GLOB SOURCES "src/*.cpp")
 
