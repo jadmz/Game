@@ -17,9 +17,19 @@ and may not be redistributed without written permission.*/
 #include "common.h"
 #include <stack>
 #include <utility>
+#include <functional>
 #include <cctype>
+#include <set>
+#include <iostream>
+#include "json.h"
+#include <fstream>
+#include "Box2D/Box2D.h"
+
+using json = nlohmann::json;
 
 #define SPRITE_COUNT 500
+
+const float PIXELS_TO_B2_UNITS = 1 / 100;
 
 const int targetFrameDuration = 1000 / 200;  // 200 frames per sec
 
@@ -127,13 +137,105 @@ void updatePhysics(TileMap& tileMap, Body& body) {
 	body.getTransform()->setPosition(Vector(pos.x + velocity.x, pos.y + velocity.y));
 }
 
-void run() {
+class AnimationFrame {
+private:
+	int duration;
+	SDL_Rect frame;
+
+public:
+	AnimationFrame(int duration, SDL_Rect frame) {
+		this->duration = duration;
+		this->frame = frame;
+	}
+
+	const SDL_Rect& getFrame() const {
+		return frame;
+	}
+
+	int getDuration() const {
+		return duration;
+	}
+};
+
+class AnimationData {
+private:
+	unique_ptr<vector<unique_ptr<const AnimationFrame>>> frames;
+	string texturePath;
+
+public:
+	AnimationData(string texturePath,  unique_ptr<vector<unique_ptr<const AnimationFrame>>> frames) {
+		this->texturePath = texturePath;
+		this->frames = move(frames);
+	}
+
+	const vector<unique_ptr<const AnimationFrame>>& getFrames() const {
+		return *frames;
+	}
+
+	const string getTexturePath() const {
+		return texturePath;
+	}
+};
+
+bool loadAnimationData(string path, unique_ptr<AnimationData>* animationData) {
+	LOG_STREAM() << "Loading AnimationData for: " << path << endl;
+	std::ifstream i(path);
+	json animationJson;
+	i >> animationJson;
+
+	auto framesItr = animationJson.find("frames");
+	if (framesItr == animationJson.end()) {
+		LOG_STREAM() << "Error! Can't find 'frames' in animation json." << endl;
+		return false;
+	}
+
+	auto frames = framesItr.value();
+	if (!frames.is_array()) {
+		LOG_STREAM() << "Error! Expected 'frames' to be an array." << endl;
+		return false;
+	}
+
+	unique_ptr<vector<unique_ptr<const AnimationFrame>>> animationFrames = 
+		unique_ptr<vector<unique_ptr<const AnimationFrame>>>(new vector<unique_ptr<const AnimationFrame>>());
+
+	for (int i = 0; i < frames.size(); i++) {
+		json frame = frames[i];
+
+		// TODO make robust to failure
+		int duration =  frame.at("duration");
+
+		json frameData = frame.at("frame");
+
+		SDL_Rect rect;
+
+		rect.x = frameData.at("x");
+		rect.y = frameData.at("y");
+		rect.w = frameData.at("w");
+		rect.h = frameData.at("h");
+
+
+		animationFrames->push_back(unique_ptr<AnimationFrame>(new AnimationFrame(duration, rect)));
+	}
+
+ 	string texturePath = animationJson.at("meta").at("image");
+	*animationData = unique_ptr<AnimationData> (new AnimationData(texturePath, move(animationFrames)));
+
+	return true;
+}
+
+void runGame() {
 	SDL_Window* window;
 
 	if (!createWindow(&window)) {
 		LOG("Failed to create window!\n");
 		return;
 	}
+
+	// Define the gravity vector.
+	b2Vec2 gravity(0.0f, -10.0f);
+
+	// Construct a world object, which will hold and simulate the rigid bodies.
+	b2World world(gravity);
 
   shared_ptr<Renderer> renderer = shared_ptr<Renderer>(NULL);
 
@@ -168,6 +270,12 @@ void run() {
     LOG("Failed to load font\n");
     return;
   }
+
+  unique_ptr<AnimationData> animationData;
+	if(!loadAnimationData("../assets/Walk.json", &animationData)) {
+		LOG("Could not load animation!\n");
+		return;
+	}
 
   shared_ptr<TilePalette> tilePalette;
   if (!assetManager->getTilePalette("test-path", tilePalette)) {
@@ -292,8 +400,8 @@ void run() {
 enum TokenType {
 	LIST_OPEN = 0,
 	LIST_CLOSE,
-	IDENTIFIER,
-	STRING
+	IDENTIFIER_TOKEN,
+	STRING_TOKEN
 };
 
 enum LexVal {
@@ -303,6 +411,26 @@ enum LexVal {
 	ALPHA_NUMERIC,
 	QUOTE
 };
+
+string nodeTypeStrings[] = {
+	"LIST_NODE",
+	"IDENTIFIER_NODE",
+	"STRING_NODE"
+};
+
+enum NodeType {
+	LIST_NODE = 0,
+	IDENTIFIER_NODE,
+	STRING_NODE
+};
+
+enum ValueType {
+	STRING_VALUE = 0,
+	CELL_VALUE,
+	NIL_VALUE,
+	FUNCTION_VALUE
+};
+
 
 class Token {
 public:
@@ -378,8 +506,8 @@ bool tokenize(string line, vector<Token>& tokens) {
           return false;
         }
 
-        token.value = line.substr(i, quoteEnd - i + 1);
-        token.type = STRING;
+        token.value = line.substr(i+1, quoteEnd - i - 1);
+        token.type = STRING_TOKEN;
         tokens.push_back(token);
         i = quoteEnd + 1;
         break;
@@ -390,7 +518,7 @@ bool tokenize(string line, vector<Token>& tokens) {
              end < line.length() && lex(line[end]) == ALPHA_NUMERIC; end++) {
         }
         token.value = line.substr(i, end - i);
-        token.type = IDENTIFIER;
+        token.type = IDENTIFIER_TOKEN;
         tokens.push_back(token);
         i = end;
         break;
@@ -411,20 +539,37 @@ void printTokens(vector<Token>& tokens) {
 	}
 }
 
+class Value {
+
+public:
+	virtual ValueType getValueType() const = 0;
+
+	virtual ostream& insertIntoStream(ostream &out) const = 0;
+
+	friend ostream& operator<< (ostream &out, const Value &c) {
+		return c.insertIntoStream(out);
+	}
+
+};
+
 class ASTNode {
  private:
   ASTNode* parent = NULL;
   vector<ASTNode*> children;
   Token token;
+  NodeType nodeType;
+  shared_ptr<Value> value;
 
  public:
-  ASTNode(ASTNode* parent) {
-    this->parent = parent;
-  }
+  ASTNode(Token token, NodeType nodeType, ASTNode* parent)
+      : ASTNode(token, nodeType, shared_ptr<Value>(nullptr), parent) {}
 
-  ASTNode(Token token, ASTNode* parent) {
+  ASTNode(Token token, NodeType nodeType, shared_ptr<Value> value,
+          ASTNode* parent) {
     this->token = token;
+    this->value = value;
     this->parent = parent;
+    this->nodeType = nodeType;
   }
 
   ~ASTNode() {
@@ -437,85 +582,421 @@ class ASTNode {
 
   void setParent(ASTNode* parent) { this->parent = parent; }
 
-  const vector<ASTNode*>& getChildren() { return children; }
+  const vector<ASTNode*>& getChildren() const { return children; }
 
   void addChild(ASTNode* astNode) { children.push_back(astNode); }
 
   const Token& getToken() const { return token; }
 
-  void setToken(Token token) { this->token = token; }
+  const shared_ptr<const Value> getValue() const {
+  	return value;
+  }
+
+  const shared_ptr<Value> getValue() {
+  	return value;
+  }
+
+  NodeType getNodeType() const {
+  	return nodeType;
+  }
 };
 
-bool parse(vector<Token>& tokens, ASTNode** root) {
-  ASTNode* node = new ASTNode(NULL);
-  *root = node;
-  for (int i = 0; i < tokens.size(); i++) {
+class NilValue : public Value {
+private:
+
+public:
+
+	ValueType getValueType() const {
+		return NIL_VALUE;
+	}
+
+	ostream& insertIntoStream(ostream &out) const {
+		out << "nil";
+		return out;
+	}
+};
+
+class FunctionValue : public Value {
+private:
+	const ASTNode* node;
+	function<bool(stack<shared_ptr<Value>>&)> cppFn;
+	bool isCppFn_;
+
+
+public:
+	FunctionValue(function<bool(stack<shared_ptr<Value>>&)> cppFn) {
+		isCppFn_ = true;
+		this->cppFn = cppFn;
+	}
+
+	FunctionValue(const ASTNode* node) {
+		isCppFn_ = false;
+		this->node = node;
+	}
+
+	~FunctionValue() {
+		delete node;
+	}
+
+	ValueType getValueType() const {
+		return FUNCTION_VALUE;
+	}
+
+	ostream& insertIntoStream(ostream &out) const {
+		out << (isCppFn_ ? "cppFn" : "fn");
+		return out;
+	}
+
+	const ASTNode* getNode() const {
+		return node;
+	}
+
+	bool isCppFn() const {
+		return isCppFn_;
+	}
+
+	function<bool(stack<shared_ptr<Value>>&)> getCppFn() const {
+		return cppFn;
+	}
+
+};
+
+class StringValue : public Value {
+private:
+	unique_ptr<string> value;
+
+public:
+	StringValue(unique_ptr<string> value) {
+		this->value = move(value);
+	}
+
+	ValueType getValueType() const {
+		return STRING_VALUE;
+	}
+
+	const string& getValue() const {
+		return *value;
+	}
+
+	ostream& insertIntoStream(ostream &out) const {
+		out << "\"" << *value << "\"";
+		return out;
+	}
+};
+
+class CellValue : public Value {
+private:
+	shared_ptr<Value> value;
+	shared_ptr<CellValue> next;
+
+public:
+	CellValue() {
+		value = shared_ptr<Value>(NULL);
+		next = shared_ptr<CellValue>(NULL);
+	}
+
+	CellValue(shared_ptr<Value> value, shared_ptr<CellValue> next) {
+		this->value = move(value);
+		this->next = next;
+	}
+
+	ValueType getValueType() const {
+		return CELL_VALUE;
+	}
+
+	bool hasValue() const {
+		return value.get() != NULL;
+	}
+
+	const Value& getValue() const {
+		return *value;
+	}
+
+	void setValue(shared_ptr<Value> value) {
+		this->value = value;
+	}
+
+	shared_ptr<CellValue> getNext() {
+		return next;
+	}
+
+	bool hasNext() const {
+		return next.get() == NULL;
+	}
+
+	void insertIntoStreamRaw(ostream &out) const {
+		if (value.get() == NULL) {
+			return;
+		}
+
+		out << *value;
+
+		if (next.get() != NULL) {
+			if (next->hasValue()) {
+				out << " ";
+			}
+			next->insertIntoStreamRaw(out);
+		}
+	}
+
+	ostream& insertIntoStream(ostream &out) const {
+		out << "(";
+		insertIntoStreamRaw(out);
+		out << ")";
+		return out;
+	}
+
+};
+
+
+bool parseStmt(vector<Token>& tokens, unique_ptr<ASTNode>& root) {
+  if (tokens.empty()) {
+  	return true;
+  }
+
+  ASTNode* node = NULL;
+  bool finished = false;
+  int i;
+
+  for (i = 0; i < tokens.size() && !finished; i++) {
     Token token = tokens[i];
-    ASTNode* child;
     switch (token.type) {
-      case LIST_OPEN:
-        child = new ASTNode(token, node);
-        node->addChild(child);
+      case LIST_OPEN: {
+        ASTNode* child = new ASTNode(token, LIST_NODE, node);
+        if (node == NULL) {
+          root = unique_ptr<ASTNode>(child);
+        } else {
+          node->addChild(child);
+        }
         node = child;
         break;
+      }
 
-      case LIST_CLOSE:
-      	if (node->getParent() != NULL) {
-      		node = node->getParent();
+      case LIST_CLOSE: {
+        node = node->getParent();
+
+        finished = node == NULL;
+
+        break;
+      }
+      case STRING_TOKEN: {
+        ASTNode* child = new ASTNode(
+            token, STRING_NODE,
+            shared_ptr<Value>(new StringValue(
+                unique_ptr<string>(new string(token.value)))),
+            node);
+        if (node == NULL) {
+          root = unique_ptr<ASTNode>(child);
+          finished = true;
+        } else {
+          node->addChild(child);
+        }
+        break;
+      }
+      case IDENTIFIER_TOKEN: {
+      	ASTNode* child = new ASTNode(
+      	    token, IDENTIFIER_NODE, node);
+      	if (node == NULL) {
+      	  root = unique_ptr<ASTNode>(child);
+      	  finished = true;
       	} else {
-      		char buf[100];
-      		token.toString(buf);
-      		LOG("Unexpected ')'. %s\n", buf);
-      		return false;
+      	  node->addChild(child);
       	}
-        break;
-
-      default:
-        child = new ASTNode(token, node);
-        node->addChild(child);
-        break;
+      	break;
+      }
     }
   }
-  if (node != *root) {
+  if (node != NULL) { 
   	LOG("Missing ')'\n");
   	return false;
   }
+
+  if (i < tokens.size()) {
+  	LOG("Unexpected token: %s\n", tokens[i].value.c_str());
+  	return false;
+  }
+  
   return true;
 }
 
 void printTree(ASTNode* root) {
-	LOG("AST Tree:\n");
-	stack<pair<int, ASTNode*>> nodes;
-	nodes.push(pair<int, ASTNode*>(0, root));
-	string depthIndicator = "|";
-	int lastDepth = 0;
-	while (!nodes.empty()) {
-		pair<int, ASTNode*> nodeAndDepth = nodes.top();
-		nodes.pop();
-		int depth = nodeAndDepth.first;
-		ASTNode* node = nodeAndDepth.second;
+  LOG("AST Tree:\n");
+  stack<pair<int, ASTNode*>> nodes;
+  nodes.push(pair<int, ASTNode*>(0, root));
+  string depthIndicator = "|";
+  int lastDepth = 0;
+  while (!nodes.empty()) {
+    pair<int, ASTNode*> nodeAndDepth = nodes.top();
+    nodes.pop();
+    int depth = nodeAndDepth.first;
+    ASTNode* node = nodeAndDepth.second;
 
-		if (lastDepth > depth) {
-			depthIndicator.pop_back();
-			depthIndicator.pop_back();
-		} 
-		if (lastDepth < depth) {
-			depthIndicator += " |";
-		}
+    if (lastDepth > depth) {
+      depthIndicator.pop_back();
+      depthIndicator.pop_back();
+    }
+    if (lastDepth < depth) {
+      depthIndicator += " |";
+    }
 
-		lastDepth = depth;
-		char buf[100];
-		node->getToken().toString(buf);
+    lastDepth = depth;
 
-		LOG("%s %s\n", depthIndicator.c_str(), buf);
-		const vector<ASTNode*>& children = node->getChildren();
-		for(int i = children.size()-1; i >= 0; i--) {
-			nodes.push(pair<int, ASTNode*> (depth +1, children[i]));
-		}
+    ostream& stream = LOG_STREAM() << depthIndicator << " " 
+                 << "NodeType: " << nodeTypeStrings[node->getNodeType()];
+   	if (node->getValue().get() != nullptr) {
+   		stream << ", Value: " << *(node->getValue());
+   	}
+   	if (node->getToken().type == IDENTIFIER_TOKEN) {
+   		stream << ", " << node->getToken().value;
+   	}
+    stream <<  endl;
+
+    const vector<ASTNode*>& children = node->getChildren();
+    for (int i = children.size() - 1; i >= 0; i--) {
+      nodes.push(pair<int, ASTNode*>(depth + 1, children[i]));
+    }
+  }
+}
+
+void printStackDestructive(stack<shared_ptr<Value>>& stak) {
+	stack<shared_ptr<Value>> backwardsStack;
+	LOG_STREAM() << "Stack:" << endl;
+	while(!stak.empty()) {
+		shared_ptr<Value> top = stak.top();
+		stak.pop();
+		backwardsStack.push(top);
+		LOG_STREAM() << *top << endl;
+	}
+
+	while(!backwardsStack.empty()) {
+		shared_ptr<Value> top = backwardsStack.top();
+		backwardsStack.pop();
+
+		stak.push(top);
 	}
 }
 
+bool cons(stack<shared_ptr<Value>>& operands) {
+	if (operands.size() < 2) {
+		LOG("Expecting two operands to cons! Found %lu\n", operands.size());
+		return false;
+	}
+	shared_ptr<Value> op1 = operands.top();
+	operands.pop();
+
+	shared_ptr<Value> op2 = operands.top();
+	operands.pop();
+
+	if (op2->getValueType() != CELL_VALUE) {
+		LOG_STREAM() << "Expecting LIST as 2nd arg to cons. Found " << *op2 << endl;
+		return false;
+	}
+
+	shared_ptr<CellValue> cdr = dynamic_pointer_cast<CellValue>(op2);
+	
+	operands.push(shared_ptr<Value>(new CellValue(op1, cdr)));
+
+	return true;
+}
+
+enum OpType {
+	FUN_CALL = 0,
+};
+
+bool eval(map<string, shared_ptr<Value>> env, const ASTNode* root,
+          stack<shared_ptr<Value>>& operands) {
+  stack<const ASTNode*> nodes;
+  stack<OpType> operations;
+  set<const ASTNode*> processedNodes;
+
+  nodes.push(root);
+
+  while (!nodes.empty()) {
+    const ASTNode* node = nodes.top();
+
+    if (processedNodes.find(node) == processedNodes.end()) {
+    	processedNodes.insert(node);
+
+    	switch (node->getNodeType()) {
+    	  case STRING_NODE: {
+    	    nodes.pop();
+    	    operands.push(shared_ptr<Value>(new StringValue(
+    	        unique_ptr<string>(new string(node->getToken().value)))));
+    	    break;
+    	  }
+    	  case IDENTIFIER_NODE: {
+    	  	nodes.pop();
+    	  	auto keyAndVal = env.find(node->getToken().value);
+    	  	if (keyAndVal == env.end()) {
+    	  		LOG("No value named: %s\n", node->getToken().value.c_str());
+    	  		return false;
+    	  	}
+
+    	  	operands.push(keyAndVal->second);
+    	  	break;
+    	  }
+    	  case LIST_NODE: {
+    	  	// test for special forms
+
+
+    	  	const vector<ASTNode*>& children = node->getChildren();
+    	  	if (children.empty()) {
+    	  		operands.push(shared_ptr<Value>(new CellValue()));
+    	  		nodes.pop();
+    	  	} else {
+    	  		operations.push(FUN_CALL);
+    	  		for (int i = 0; i < children.size(); i++) {
+    	  			nodes.push(children[i]);
+    	  		}
+    	  	}
+    	  }
+    	}
+    } else {
+    	nodes.pop();
+    	OpType op = operations.top();
+    	operations.pop();
+
+    	switch (op) {
+    		case FUN_CALL: {
+    			shared_ptr<Value> val = operands.top();
+    			operands.pop();
+    			if (val->getValueType() != FUNCTION_VALUE) {
+    				LOG_STREAM() << "Expected function call, but got " << *val << endl;
+    				printStackDestructive(operands);
+    				return false;
+    			}
+    			shared_ptr<FunctionValue> fn = dynamic_pointer_cast<FunctionValue> (val);
+    			if (fn->isCppFn()) {
+    				if (!fn->getCppFn()(operands)) {
+    					LOG("Cpp fn failed! \n");
+    					return false;
+    				}
+    			} else {
+    				nodes.push(fn->getNode());
+    			}
+    		}
+    	}
+    }
+  }
+
+  return true;
+}
+
+bool run(stack<shared_ptr<Value>>& operands) {
+
+	runGame();
+
+	operands.push(shared_ptr<Value>(new NilValue()));
+
+	return true;
+}
+
 static int editorRepl() {
+	map<string, shared_ptr<Value>> env;
+
+	env.emplace("run", shared_ptr<Value>(new FunctionValue(&run)));
+	env.emplace("cons", shared_ptr<Value>(new FunctionValue(&cons)));
+
 	vector<Token> tokens; 
 	string line;
 	bool run = true;
@@ -531,13 +1012,30 @@ static int editorRepl() {
 			continue;
 		}
 		printTokens(tokens);
-		ASTNode* root;
-		if (!parse(tokens, &root)) {
+		unique_ptr<ASTNode> root = NULL;
+		if (!parseStmt(tokens, root)) {
 			LOG("Parse error!\n");
 			continue;
 		}
 
-		printTree(root);
+		if (root == NULL) {
+			continue;
+		}
+
+		printTree(root.get());
+
+		stack<shared_ptr<Value>> operands;
+		if(!eval(env, root.get(), operands)) {
+			LOG("Eval failed!\n");
+			continue;
+		}
+		printStackDestructive(operands);
+
+		if (!operands.empty()) {
+			shared_ptr<Value> val = operands.top();
+			operands.pop();
+			cout << *val << endl;
+		}
 	}
 	return 0;
 }
