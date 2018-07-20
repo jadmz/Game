@@ -4,18 +4,8 @@ project (Game)
 
 set(BOX2D_DIR libs/Box2D)
 
-option(BOX2D_INSTALL "Install Box2D libs, includes, and CMake scripts" OFF)
-option(BOX2D_INSTALL_DOC "Install Box2D documentation" OFF)
-option(BOX2D_BUILD_SHARED "Build Box2D shared libraries" ON)
-option(BOX2D_BUILD_STATIC "Build Box2D static libraries" OFF)
 
-set(BOX2D_VERSION 2.3.0)
 add_subdirectory("${BOX2D_DIR}")
-
-add_definitions     ( ${BOX2D_DEFINITIONS} )
-include_directories ( ${BOX2D_INCLUDE_DIRS} )
-link_directories    ( ${BOX2D_LIBRARY_DIRS} )
-
 
 
 IF(MSVC)
@@ -58,8 +48,18 @@ include_directories(
 
 file(GLOB SOURCES "src/*.cpp")
 
-add_executable(Game ${SOURCES})
+FUNCTION(PREPEND var prefix)
+   SET(listVar "")
+   FOREACH(f ${ARGN})
+      LIST(APPEND listVar "${prefix}/${f}")
+   ENDFOREACH(f)
+   SET(${var} "${listVar}" PARENT_SCOPE)
+ENDFUNCTION(PREPEND)
+message("src: ${BOX2D_General_HDRS}")
+PREPEND(BOX2D_SRCS ${BOX2D_DIR} ${BOX2D_SRCS})
 
+add_executable(Game ${SOURCES}
+	${BOX2D_SRCS})
 target_link_libraries(Game 
 	${SDL2_LIBRARY} 
 	${SDL2_IMAGE_LIBRARIES})
