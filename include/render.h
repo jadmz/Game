@@ -6,6 +6,7 @@
 #include <string>
 #include <memory>
 #include "common.h"
+#include "Box2D/Box2D.h"
 
 using namespace std;
 
@@ -42,7 +43,7 @@ public:
   }
 };
 
-class Renderer {
+class Renderer : public b2Draw {
 
 private:
 	SDL_Renderer* renderer;
@@ -57,6 +58,8 @@ public:
 	}
 
 	void clear() const {
+    SDL_SetRenderDrawColor( renderer, 0x00, 0x00, 0x00, 0xFF ); 
+
 		SDL_RenderClear( renderer );
 	}
 
@@ -82,6 +85,115 @@ public:
 
 		return true;
 	}
+
+  /// Draw a closed polygon provided in CCW order.
+  void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) {
+    if (vertexCount != 4) {
+      LOG("Polygon is not a square!!\n");
+    }
+    SDL_SetRenderDrawColor(renderer, color.r * 255, color.g * 255, color.b* 255, color.a * 255);
+
+    float minX = 10000.0f;
+    float maxX = -10000.0f;
+    float minY = 10000.0f;
+    float maxY = -10000.0f;
+
+    for(int i = 0; i < vertexCount; i++) {
+      if (vertices[i].x < minX) {
+        minX = vertices[i].x;
+      }
+      if (vertices[i].x > maxX) {
+        maxX = vertices[i].x;
+      }
+
+      if (-vertices[i].y < minY) {
+        minY = -vertices[i].y;
+      }
+
+      if (-vertices[i].y > maxY) {
+        maxY = -vertices[i].y;
+      }
+    } 
+
+
+    SDL_Rect rect {
+      (int) (minX * B2_UNITS_TO_PIXELS),
+      (int) (minY * B2_UNITS_TO_PIXELS),
+      (int) ((maxX - minX) * B2_UNITS_TO_PIXELS),
+      (int) ((maxY - minY) * B2_UNITS_TO_PIXELS)
+    };
+
+    SDL_RenderDrawRect(renderer, &rect);
+  }
+
+  /// Draw a solid closed polygon provided in CCW order.
+  void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) {
+    if (vertexCount != 4) {
+      LOG("Polygon is not a square!!\n");
+    }
+    SDL_SetRenderDrawColor(renderer, color.r * 255, color.g * 255, color.b* 255, color.a * 255);
+
+    float minX = 10000.0f;
+    float maxX = -10000.0f;
+    float minY = 10000.0f;
+    float maxY = -10000.0f;
+
+    for(int i = 0; i < vertexCount; i++) {
+      if (vertices[i].x < minX) {
+        minX = vertices[i].x;
+      }
+      if (vertices[i].x > maxX) {
+        maxX = vertices[i].x;
+      }
+
+      if (-vertices[i].y < minY) {
+        minY = -vertices[i].y;
+      }
+
+      if (-vertices[i].y > maxY) {
+        maxY = -vertices[i].y;
+      }
+    } 
+
+
+    SDL_Rect rect {
+      (int) (minX * B2_UNITS_TO_PIXELS),
+      (int) (minY * B2_UNITS_TO_PIXELS),
+      (int) ((maxX - minX) * B2_UNITS_TO_PIXELS),
+      (int) ((maxY - minY) * B2_UNITS_TO_PIXELS)
+    };
+
+    SDL_RenderFillRect(renderer, &rect);
+  }
+
+  /// Draw a circle.
+  void DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color) {
+
+  }
+  
+  /// Draw a solid circle.
+  void DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color) {
+
+  }
+  
+  /// Draw a line segment.
+  void DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color) {
+
+  }
+
+  /// Draw a transform. Choose your own length scale.
+  /// @param xf a transform.
+  void DrawTransform(const b2Transform& xf) {
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_Rect rect {
+      (int) (xf.p.x * B2_UNITS_TO_PIXELS)-3,
+      (int) -(xf.p.y * B2_UNITS_TO_PIXELS) -3,
+      6,
+      6
+    };
+
+    SDL_RenderFillRect(renderer, &rect);
+  }
 };
 
 

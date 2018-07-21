@@ -48,7 +48,7 @@ class TileInstance {
 
   void render(const Renderer& renderer, int x , int y) {
     SDL_Rect* source = tileDefinition->getTexRect();
-    SDL_Rect dest {x, y, source->w, source->h};
+    SDL_Rect dest {x-source->w/2, y-source->w/2, source->w, source->h};
     renderer.render(*texture, source, &dest);
   }
 };
@@ -106,6 +106,10 @@ public:
     this->mapHeight = mapHeight;
     this->tileLength = tileLength;
     tileInstances = unique_ptr<PosToTileInstanceMap>(new PosToTileInstanceMap());
+  }
+
+  int getTileLength() const {
+    return tileLength;
   }
 
   int getMapWidth() const {

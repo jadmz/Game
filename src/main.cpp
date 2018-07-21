@@ -29,23 +29,12 @@ using json = nlohmann::json;
 
 #define SPRITE_COUNT 500
 
-const float PIXELS_TO_B2_UNITS = 1 / 100;
-
 const int targetFrameDuration = 1000 / 200;  // 200 frames per sec
 
 SDL_Rect rects[SPRITE_COUNT];
 
-class AABB {
-private:
-	float width;
-	float height;
+bool debugDraw;
 
-public:
-	AABB(float width, float height) {
-		this->width = width;
-		this->height = height;
-	}
-};
 
 class Vector {
  private:
@@ -96,30 +85,6 @@ class Transform {
   void setScale(float scale) { this->scale = scale; }
 };
 
-class Body {
- private:
-  shared_ptr<Transform> transform;
-  AABB aabb;
-  Vector velocity;
-
- public:
-  Body(float width, float height) : aabb(width, height) {
-    transform = shared_ptr<Transform>(new Transform());
-    velocity = Vector();
-  }
-
-  shared_ptr<Transform> getTransform() const { return transform; }
-
-  AABB getAabb() const { 
-  	return aabb;
-  }
-
-  Vector getVelocity() const {return velocity; }
-
-  void setVelocity(Vector velocity) {
-  	this->velocity = velocity;
-  }
-};
 
 bool initSystem() {
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -128,13 +93,6 @@ bool initSystem() {
   }
 
   return initRenderingSystem();
-}
-
-void updatePhysics(TileMap& tileMap, Body& body) {
-	Vector pos = body.getTransform()->getPosition();
-	Vector velocity = body.getVelocity();
-
-	body.getTransform()->setPosition(Vector(pos.x + velocity.x, pos.y + velocity.y));
 }
 
 class AnimationFrame {
@@ -223,7 +181,130 @@ bool loadAnimationData(string path, unique_ptr<AnimationData>* animationData) {
 	return true;
 }
 
+void createTile(b2World& world, TileMap& tileMap, int x, int y, shared_ptr<TileInstance> tileInstance) {
+	tileMap.set(x, y, tileInstance);
+
+	int tileLength = tileMap.getTileLength();
+
+	b2BodyDef groundBodyDef;
+	LOG("New Tile at X(%f), Y(%f)\n", x * tileLength * PIXELS_TO_B2_UNITS, -y * tileLength * PIXELS_TO_B2_UNITS);
+	groundBodyDef.position.Set(x * tileLength * PIXELS_TO_B2_UNITS, -y * tileLength * PIXELS_TO_B2_UNITS);
+
+	// Call the body factory which allocates memory for the ground body
+	// from a pool and creates the ground box shape (also from a pool).
+	// The body is also added to the world.
+	b2Body* groundBody = world.CreateBody(&groundBodyDef);
+
+	// Define the ground box shape.
+	b2PolygonShape groundBox;
+
+	// The extents are the half-widths of the box.
+	groundBox.SetAsBox(tileLength * PIXELS_TO_B2_UNITS/2.0f, tileLength * PIXELS_TO_B2_UNITS/2.0f);
+
+	// Add the ground fixture to the ground body.
+	groundBody->CreateFixture(&groundBox, 0.0f);
+}
+
+void loadImage(const string& imgPath) {
+	if (!initSystem()) {
+	  LOG("Failed to initialize system! Exiting...\n");
+	  return;
+	}
+
+	SDL_Window* window;
+
+	if (!createWindow(&window)) {
+		LOG("Failed to create window!\n");
+		return;
+	}
+
+	shared_ptr<Renderer> renderer = shared_ptr<Renderer>(NULL);
+
+	if (!createRenderer(window, &renderer)) {
+	  LOG("Failed to create system! Exiting...\n");
+	  return;
+	}
+
+	unique_ptr<AssetManager> assetManager =
+	    unique_ptr<AssetManager>(new AssetManager(renderer));
+
+	shared_ptr<Font> font;
+	if (!assetManager->getFont("../assets/arial_regular_10", &font)) {
+	  LOG("Failed to load font\n");
+	  return;
+	}
+
+	// Current displayed texture
+	shared_ptr<Texture> texture = shared_ptr<Texture>(NULL);
+
+	if (!assetManager->getTexture(imgPath, &texture)) {
+	  LOG("Failed to load texture! Exiting...\n");
+	  return;
+	}
+
+  // Main loop flag
+  bool quit = false;
+
+	// Event handler
+	SDL_Event e;
+
+	Uint64 start;
+	Uint64 end;
+	Uint32 lastLoggedFPS = 0;
+
+	char fpsBuf[20];
+	string fpsText = "";
+	int previousFrameStart = SDL_GetTicks();
+
+	// While application is running
+	while (!quit) {
+	  start = SDL_GetPerformanceCounter();
+	  int frameStart = SDL_GetTicks();
+	  int dt = frameStart - previousFrameStart;
+	  // Handle events on queue
+	  while (SDL_PollEvent(&e) != 0) {
+	    // User requests quit
+	    if (e.type == SDL_QUIT) {
+	      quit = true;
+	    }
+	  }
+
+    // Clear screen
+    renderer->clear();
+
+    renderer->render(*texture, NULL, NULL);
+
+    font->render(*renderer, fpsText, 10, 10);
+
+    renderer->present();
+
+    end = SDL_GetPerformanceCounter();
+
+    float elapsed = (end - start) / (float)SDL_GetPerformanceFrequency();
+    if (frameStart - lastLoggedFPS > 1000) {
+      sprintf(fpsBuf, "FPS: %d", (int)(1.0f / elapsed));
+      fpsText = fpsBuf;
+      lastLoggedFPS = frameStart;
+    }
+
+    previousFrameStart = frameStart;
+
+	}
+
+
+	  // Destroy window
+	SDL_DestroyWindow(window);
+
+	// Quit SDL subsystems
+	SDL_Quit();
+}
+
 void runGame() {
+	if (!initSystem()) {
+	  LOG("Failed to initialize system! Exiting...\n");
+	  return;
+	}
+
 	SDL_Window* window;
 
 	if (!createWindow(&window)) {
@@ -232,7 +313,7 @@ void runGame() {
 	}
 
 	// Define the gravity vector.
-	b2Vec2 gravity(0.0f, -10.0f);
+	b2Vec2 gravity(0.0f, -1.0f);
 
 	// Construct a world object, which will hold and simulate the rigid bodies.
 	b2World world(gravity);
@@ -243,6 +324,9 @@ void runGame() {
     LOG("Failed to create system! Exiting...\n");
     return;
   }
+
+  world.SetDebugDraw(renderer.get());
+  renderer->SetFlags(b2Draw::e_shapeBit);
 
   unique_ptr<AssetManager> assetManager =
       unique_ptr<AssetManager>(new AssetManager(renderer));
@@ -292,29 +376,54 @@ void runGame() {
 
   TileMap tileMap = TileMap(20, 20, 32);
 
-  tileMap.set(4, 4, tileInstance);
-  tileMap.set(4, 5, tileInstance);
-  tileMap.set(4, 6, tileInstance);
-  tileMap.set(5, 6, tileInstance);
-  tileMap.set(6, 6, tileInstance);
-  tileMap.set(7, 6, tileInstance);
+  createTile(world, tileMap, 4, 4, tileInstance);
+  createTile(world, tileMap, 4, 5, tileInstance);
+  createTile(world, tileMap, 4, 6, tileInstance);
+  createTile(world, tileMap, 5, 6, tileInstance);
+  createTile(world, tileMap, 6, 6, tileInstance);
+  createTile(world, tileMap, 7, 6, tileInstance);
 
-  tileMap.set(9, 6, tileInstance);
-  tileMap.set(10, 6, tileInstance);
-  tileMap.set(11, 6, tileInstance);
-  tileMap.set(12, 6, tileInstance);
-  tileMap.set(12, 5, tileInstance);
-  tileMap.set(12, 4, tileInstance);
-  tileMap.set(13, 4, tileInstance);
-  tileMap.set(14, 4, tileInstance);
+  createTile(world, tileMap, 9, 6, tileInstance);
+  createTile(world, tileMap, 10, 6, tileInstance);
+  createTile(world, tileMap, 11, 6, tileInstance);
+  createTile(world, tileMap, 12, 6, tileInstance);
+  createTile(world, tileMap, 12, 5, tileInstance);
+  createTile(world, tileMap, 12, 4, tileInstance);
+  createTile(world, tileMap, 13, 4, tileInstance);
+  createTile(world, tileMap, 14, 4, tileInstance);
 
   SDL_Rect playerDestination{0, 0, texture->getWidth(), texture->getHeight()};
-  float playerSpeed = 200.0f / 1000;  // per ms
-  float playerX = 20.0f;
-  float playerY = 20.0f;
+  float playerSpeed = 200.0f / 10000;  // per ms
 
-  Body playerBody = Body(32.0f, 32.0f);
-  playerBody.getTransform()->setPosition(Vector(20.0f, 20.0f));
+  // Define the dynamic body. We set its position and call the body factory.
+	b2BodyDef bodyDef;
+	bodyDef.type = b2_dynamicBody;
+	bodyDef.position.Set(200.0f * PIXELS_TO_B2_UNITS, -150.0f * PIXELS_TO_B2_UNITS);
+	bodyDef.gravityScale = 1.0f;
+	b2Body* playerBody = world.CreateBody(&bodyDef);
+
+	// Define another box shape for our dynamic body.
+	b2PolygonShape dynamicBox;
+	LOG("Texture Width(%d) Height(%d)\n", texture->getWidth(), texture->getHeight());
+	dynamicBox.SetAsBox(texture->getWidth() * PIXELS_TO_B2_UNITS/2.0f, texture->getHeight() * PIXELS_TO_B2_UNITS/2.0f);
+
+	// Define the dynamic body fixture.
+	b2FixtureDef fixtureDef;
+	fixtureDef.shape = &dynamicBox;
+
+	// Set the box density to be non-zero, so it will be dynamic.
+	fixtureDef.density = 20.0f;
+
+	// Override the default friction.
+	fixtureDef.friction = 0.3f;
+
+	// Add the shape to the body.
+	playerBody->CreateFixture(&fixtureDef);
+
+
+	float32 timeStep = 1.0f / 60.0f;
+	int32 velocityIterations = 6;
+	int32 positionIterations = 2;
 
   // Main loop flag
   bool quit = false;
@@ -341,10 +450,22 @@ void runGame() {
       if (e.type == SDL_QUIT) {
         quit = true;
       }
+
+      if (e.type == SDL_KEYUP && e.key.keysym.scancode == SDL_SCANCODE_F1) {
+	    	if (! debugDraw) {
+	    		debugDraw = true;
+	    		renderer->SetFlags(b2Draw::e_aabbBit | b2Draw::e_centerOfMassBit);
+	    	} else if (renderer->GetFlags() & b2Draw::e_aabbBit) {
+	    		renderer->SetFlags(b2Draw::e_shapeBit | b2Draw::e_centerOfMassBit);
+	    	} else {
+	    		debugDraw = false;
+	    	}
+      }
     }
 
     const Uint8* state = SDL_GetKeyboardState(NULL);
-    Vector velocity;
+
+    b2Vec2 velocity;
     if (state[SDL_SCANCODE_UP]) {
       velocity.y -= playerSpeed * dt;
     }
@@ -361,14 +482,14 @@ void runGame() {
       velocity.x -= playerSpeed * dt;
     }
 
-    playerBody.setVelocity(velocity);
+    b2Vec2 p = playerBody->GetWorldPoint(b2Vec2(0.0f, 0.0f));
+    playerBody->ApplyLinearImpulse(playerBody->GetWorldVector(velocity), p, true);
 
-    // LOG ("Player dest: %d, %d\n", playerDestination.x, playerDestination.y);
+    world.Step(timeStep, velocityIterations, positionIterations);
 
-    updatePhysics(tileMap, playerBody);
-
-    playerDestination.x = playerBody.getTransform()->getPosition().x;
-    playerDestination.y = playerBody.getTransform()->getPosition().y;
+    playerDestination.x = playerBody->GetPosition().x * B2_UNITS_TO_PIXELS - 16;
+    playerDestination.y = -playerBody->GetPosition().y * B2_UNITS_TO_PIXELS - 16;
+    //LOG_STREAM() << "Player Destination: X(" << playerDestination.x << ") Y(" << playerDestination.y << ")" << endl;
 
     // Clear screen
     renderer->clear();
@@ -378,6 +499,10 @@ void runGame() {
     renderer->render(*texture, NULL, &playerDestination);
 
     font->render(*renderer, fpsText, 10, 10);
+
+    if (debugDraw) {
+	    world.DrawDebugData();
+	  }
 
     renderer->present();
 
@@ -395,6 +520,9 @@ void runGame() {
 
     // Destroy window
   SDL_DestroyWindow(window);
+
+  // Quit SDL subsystems
+  SDL_Quit();
 }
 
 enum TokenType {
@@ -991,11 +1119,36 @@ bool run(stack<shared_ptr<Value>>& operands) {
 	return true;
 }
 
+bool loadImg(stack<shared_ptr<Value>>& operands) {
+	if (operands.size() < 1) {
+		LOG("Expecting 1 operands to load-img! Found %lu\n", operands.size());
+		return false;
+	}
+	shared_ptr<Value> op = operands.top();
+	operands.pop();
+
+	if (op->getValueType() != STRING_VALUE) {
+		LOG_STREAM() << "Expecting STRING as arg to load-img. Found " << *op << endl;
+		return false;
+	}
+
+
+	shared_ptr<StringValue> str = dynamic_pointer_cast<StringValue>(op);
+
+	loadImage(str->getValue());
+
+	operands.push(shared_ptr<Value>(new NilValue()));
+
+	return true;
+}
+
 static int editorRepl() {
 	map<string, shared_ptr<Value>> env;
 
 	env.emplace("run", shared_ptr<Value>(new FunctionValue(&run)));
 	env.emplace("cons", shared_ptr<Value>(new FunctionValue(&cons)));
+	env.emplace("load-img", shared_ptr<Value>(new FunctionValue(&loadImg)));
+
 
 	vector<Token> tokens; 
 	string line;
@@ -1045,15 +1198,7 @@ int main(int argc, char* args[]) {
 
   LOG("SDL Compiled Version: %d\n", SDL_COMPILEDVERSION);
 
-  if (!initSystem()) {
-    LOG("Failed to initialize system! Exiting...\n");
-    return 1;
-  }
-
   int returnVal = editorRepl();
-
-  // Quit SDL subsystems
-  SDL_Quit();
 
   return returnVal;
 }
